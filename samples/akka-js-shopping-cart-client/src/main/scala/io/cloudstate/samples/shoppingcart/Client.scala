@@ -25,6 +25,8 @@ object Client {
       println(client.getCart(userId))
       client.removeItem(userId, productId)
       println(client.getCart(userId))
+    } catch {
+      case t: Throwable => println(s"Something went wrong: $t")
     } finally {
       try {
         client.shutdown()
