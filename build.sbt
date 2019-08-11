@@ -364,6 +364,36 @@ lazy val `tck` = (project in file("tck"))
     executeTests in Test := (executeTests in Test).dependsOn(`proxy-core`/assembly).value
   )
 
+lazy val `scala-support` = (project in file("scala-support"))
+  .enablePlugins(AkkaGrpcPlugin)
+  .settings(
+    common,
+
+    name := "scala-support",
+
+    libraryDependencies ++= Seq(
+      // Remove these explicit gRPC/netty dependencies once akka-grpc 0.7.1 is released and we've upgraded to using that
+      "io.grpc"             % "grpc-netty-shaded"    % GrpcJavaVersion,
+      "io.grpc"             % "grpc-core"            % GrpcJavaVersion,
+      "com.typesafe.akka"  %% "akka-stream"          % AkkaVersion,
+      "com.typesafe.akka"  %% "akka-http"            % AkkaHttpVersion,
+      "com.typesafe.akka"  %% "akka-http-spray-json" % AkkaHttpVersion,
+      "com.google.protobuf" % "protobuf-java"        % ProtobufVersion % "protobuf",
+      "org.scalatest"      %% "scalatest"            % ScalaTestVersion,
+      "com.typesafe.akka"  %% "akka-testkit"         % AkkaVersion
+    ),
+
+    PB.protoSources in Compile ++= {
+      val baseDir = (baseDirectory in ThisBuild).value / "protocols"
+      Seq(baseDir / "frontend")
+    },
+
+    fork in test := false,
+
+    parallelExecution in Test := false,
+
+  )
+
 def doCompileK8sDescriptors(dir: File, target: File, registry: String, username: String, version: String): File = {
   val files = ((dir / "crds") * "*.yaml").get ++
     (dir * "*.yaml").get.sortBy(_.getName)
