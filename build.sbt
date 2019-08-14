@@ -385,7 +385,7 @@ lazy val `scala-support` = (project in file("scala-support"))
 
     PB.protoSources in Compile ++= {
       val baseDir = (baseDirectory in ThisBuild).value / "protocols"
-      Seq(baseDir / "frontend")
+      Seq(baseDir / "frontend", baseDir / "example")
     },
 
     fork in test := false,

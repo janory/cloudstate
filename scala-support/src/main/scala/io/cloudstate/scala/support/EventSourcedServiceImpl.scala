@@ -4,17 +4,21 @@ import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
-import com.example.shoppingcart.{Cart, GetShoppingCart, ShoppingCart}
+import com.example.shoppingcart._
 import com.google.protobuf
 import com.google.protobuf.any.{Any => pbAny}
+import com.google.protobuf.empty.Empty
 import io.cloudstate.entity.ClientAction.Action
 import io.cloudstate.entity.{ClientAction, Command, Failure}
 import io.cloudstate.eventsourced.EventSourcedStreamOut.Message
 import io.cloudstate.eventsourced.EventSourcedStreamOut.Message.{Reply, Failure => FailureWrapper}
 import io.cloudstate.eventsourced._
+import scalapb.GeneratedMessage
+
+import scala.concurrent.Future
 
 
-class EventSourcedServiceImpl(implicit mat: Materializer) extends EventSourced {
+class EventSourcedServiceImpl(implicit mat: Materializer, ch: CustomHandler) extends EventSourced {
 
 
   override def handle(in: Source[EventSourcedStreamIn, NotUsed]): Source[EventSourcedStreamOut, NotUsed] = {
@@ -74,7 +78,7 @@ class CommandHandler(val eventSourcedSnapshot: Option[EventSourcedSnapshot]) {
   )
 
 
-  def handleCommand(command: Command) = {
+  def handleCommand(command: Command, ch: CustomHandler) = {
     println(s"Received command ${command.name} with type ${command.payload.get.typeUrl}")
 
     if (command.name == "GetCart") {
@@ -86,7 +90,9 @@ class CommandHandler(val eventSourcedSnapshot: Option[EventSourcedSnapshot]) {
       println(s"cartState $cartState")
       println(s"deserializedCommand $deserializedCommand")
 
-//      cartState.items.filter(_.productId)
+      ch.handleCommand(command, snapshot.get)
+
+      //      cartState.items.filter(_.productId)
 
       //      val deserializedSnapshot = deserialize(snapshot)
       //      getCart(deserializedCommand, deserializedSnapshot)
@@ -99,4 +105,126 @@ class CommandHandler(val eventSourcedSnapshot: Option[EventSourcedSnapshot]) {
   }
 
   def getCart(request: GetShoppingCart, cart: Any) = cart
+}
+
+trait CustomHandler {
+  //  type T <: scalapb.GeneratedMessage with scalapb.Message[T]
+    protected type B <: scalapb.GeneratedMessage with scalapb.Message[B]
+  //  def getSerializer(url: String): Either[ScalapbProtobufSerializer[T], ScalapbProtobufSerializer[B]]
+
+//  def tes[Z](url: String, clazz: Class[Z]): GeneratedMessageCompanion[Z]
+//
+//  //  val serMap: Map[(String, Class[Z]), ScalapbProtobufSerializer[Z]]
+//  sealed trait Json[T] {
+//    def ser(ba: Array[Byte]): T
+//  }
+//
+//  def getJson[T](s: String): Json[T]
+//
+//  def handle() = {
+//    val ret: Json[Nothing] = this.getJson("dsadas")
+//  }
+
+  protected def desCommand(typeUrl: String, payload: Array[Byte]): GeneratedMessage
+
+  protected def deSerializerState(payload: Array[Byte]): B
+
+  protected def serializerState(state: GeneratedMessage): Array[Byte] = {
+    state.toByteArray
+  }
+
+//  def getService
+
+//  def handle(command: GeneratedMessage, state: GeneratedMessage): Option[GeneratedMessage]
+  protected def handle(commandName: String, command: GeneratedMessage, state: B): Option[B]
+
+  def handleCommand(command: Command, localState: pbAny): Option[pbAny] = {
+    val desedCommand: GeneratedMessage = desCommand(command.payload.get.typeUrl, command.payload.get.toByteArray)
+    val desState: B = deSerializerState(localState.toByteArray)
+    val mayBeNewState = handle(command.name, desedCommand, desState)
+    mayBeNewState.map(st => pbAny.apply("", st.toByteString))
+  }
+
+}
+
+class ShoppingCartImpl extends CustomHandler {
+  type T = GetShoppingCart
+  type B = Cart
+
+//  final class JsonString(string: GetShoppingCart) extends Json[GetShoppingCart] {
+//    def ser(ba: Array[Byte]) = string.companion.parseFrom(ba)
+//  }
+//  final class JsonInt(int: Cart) extends Json[Cart] {
+//    def ser(ba: Array[Byte]) = int.companion.parseFrom(ba)
+//  }
+//
+////  val methpd = GetShoppingCart[GetShoppingCart].toByteArray
+//
+//  override def getJson(s: String) = s match {
+//    case "1" => new JsonString([])
+//    case "2" => new JsonInt(1)
+//  }
+
+
+  //  type HA >: GetShoppingCart with Cart <: GeneratedMessage with scalapb.Message[_ >: GetShoppingCart with Cart] with Updatable[_ >: GetShoppingCart with Cart]
+  //
+  //  final class Ser1(x: GetShoppingCart) extends ProtobufSerializer[GetShoppingCart] {
+  //    override def serialize(t: GetShoppingCart): ByteString = ???
+  //    override def deserialize(bytes: ByteString): GetShoppingCart = ???
+  //  }
+  //
+  //  final class Ser2(x: Cart) extends ProtobufSerializer[Cart] {
+  //    override def serialize(t: Cart): ByteString = ???
+  //    override def deserialize(bytes: ByteString): Cart = ???
+  //  }
+  //
+  //  final class Ser2(x: Z) extends ProtobufSerializer[Z] {
+  //    override def serialize(t: Z): ByteString = ???
+  //    override def deserialize(bytes: ByteString): Z = ???
+  //  }
+  //
+  //  override def tes(url: String): ProtobufSerializer[G] = {
+  //    url match {
+  //      case "Something" => new Ser1(???)
+  //      case "Something2" => new Ser2(???)
+  //    }
+  //  }
+  //
+  //  override def getSerializer(url: String): Either[ScalapbProtobufSerializer[GetShoppingCart], ScalapbProtobufSerializer[Cart]] = {
+  //    url match {
+  //      case "Something" => Left(ShoppingCart.Serializers.GetShoppingCartSerializer)
+  //      case "Something2" => Right(ShoppingCart.Serializers.CartSerializer)
+  //    }
+  //  }
+  //  override def getSerializer(url: String): Either[ScalapbProtobufSerializer[GetShoppingCart], ScalapbProtobufSerializer[Cart]] = ???
+  //
+  //  override def tes[C](url: String): ProtobufSerializer[C] = ???
+  //
+  //  override val serMap: Map[(String, GetShoppingCart), ScalapbProtobufSerializer[GetShoppingCart]] = _
+//  override def tes[Z](url: String, clazz: Class[Z]): GeneratedMessageCompanion[Z] = url match {
+//    case "Something" => Cart.messageCompanion
+//    //        case "Something2" => new Ser2(???)
+//  }
+
+  override def deSerializerState(payload: Array[Byte]): B = {
+      Cart.parseFrom(payload)
+  }
+
+  override def desCommand(typeUrl: String, payload: Array[Byte]): GeneratedMessage = {
+    typeUrl match {
+      case "ava" => GetShoppingCart.parseFrom(payload)
+      case "ava" => AddLineItem.parseFrom(payload)
+    }
+  }
+
+  def handle(commandName: String, command: GeneratedMessage, state: B): Option[B] = {
+    commandName match {
+      case "GetCart" =>
+        Some(state)
+      case "RemoveItem" =>
+        val req: RemoveLineItem = command.asInstanceOf
+        println(s"remove $req")
+        None
+    }
+  }
 }
