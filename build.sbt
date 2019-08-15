@@ -51,7 +51,7 @@ headerSources in Compile ++= {
 }
 
 lazy val root = (project in file("."))
-  .aggregate(`proxy-core`, `proxy-cassandra`, `akka-client`, operator, `tck`)
+  .aggregate(`proxy-core`, `proxy-cassandra`, `akka-client`, operator, `tck`, `scala-support`, `scala-shopping-cart`)
   .settings(common)
 
 def dockerSettings: Seq[Setting[_]] = Seq(
@@ -319,7 +319,7 @@ lazy val `akka-client` = (project in file("samples/akka-client"))
     PB.protoSources in Compile ++= {
       val baseDir = (baseDirectory in ThisBuild).value / "protocols"
       Seq(baseDir / "frontend", baseDir / "example")
-    },
+    }
   )
 
 lazy val `load-generator` = (project in file("samples/js-shopping-cart-load-generator"))
@@ -392,6 +392,36 @@ lazy val `scala-support` = (project in file("scala-support"))
 
     parallelExecution in Test := false,
 
+  )
+
+lazy val `scala-shopping-cart` = (project in file("samples/scala-shopping-cart"))
+  .enablePlugins(AkkaGrpcPlugin)
+  .dependsOn(`scala-support`)
+  .settings(
+    common,
+    name := "scala-shopping-cart",
+
+    fork in run := true,
+
+    libraryDependencies ++= Seq(
+      // Remove these explicit gRPC/netty dependencies once akka-grpc 0.7.1 is released and we've upgraded to using that
+//      "io.grpc"               % "grpc-netty-shaded"    % GrpcJavaVersion,
+//      "io.grpc"               % "grpc-core"            % GrpcJavaVersion,
+//      "com.typesafe.akka"    %% "akka-persistence"     % AkkaVersion,
+//      "com.typesafe.akka"    %% "akka-stream"          % AkkaVersion,
+//      "com.typesafe.akka"    %% "akka-http"            % AkkaHttpVersion,
+//      "com.typesafe.akka"    %% "akka-http-spray-json" % AkkaHttpVersion,
+//      "com.typesafe.akka"    %% "akka-http-core"       % AkkaHttpVersion,
+//      "com.typesafe.akka"    %% "akka-http2-support"   % AkkaHttpVersion,
+//      "com.typesafe.akka"    %% "akka-parsing"         % AkkaVersion,
+      "com.google.protobuf"   % "protobuf-java"        % ProtobufVersion % "protobuf",
+      "com.thesamet.scalapb" %% "scalapb-runtime"      % scalapb.compiler.Version.scalapbVersion % "protobuf"
+    ),
+
+    PB.protoSources in Compile ++= {
+      val baseDir = (baseDirectory in ThisBuild).value / "protocols"
+      Seq(baseDir / "frontend", baseDir / "example")
+    }
   )
 
 def doCompileK8sDescriptors(dir: File, target: File, registry: String, username: String, version: String): File = {

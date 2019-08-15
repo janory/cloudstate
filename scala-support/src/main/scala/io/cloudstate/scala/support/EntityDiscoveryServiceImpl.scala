@@ -9,7 +9,7 @@ import io.cloudstate.entity._
 
 import scala.concurrent.Future
 
-class EntityDiscoveryServiceImpl(implicit mat: Materializer) extends EntityDiscovery {
+class EntityDiscoveryServiceImpl(serviceName: String, persistenceId: String)(implicit mat: Materializer) extends EntityDiscovery {
 
   override def discover(in: ProxyInfo): Future[EntitySpec] = {
     // TODO make this idiomatic scala
@@ -24,8 +24,8 @@ class EntityDiscoveryServiceImpl(implicit mat: Materializer) extends EntityDisco
     // TODO don't hardcode this
     val entities = Set(Entity(
       entityType = "cloudstate.eventsourced.EventSourced",
-      serviceName = "com.example.shoppingcart.ShoppingCart",
-      persistenceId = "shopping-cart"))
+      serviceName = serviceName,
+      persistenceId = persistenceId))
 
     val ep = EntitySpec(userFunction, entities.toList)
 

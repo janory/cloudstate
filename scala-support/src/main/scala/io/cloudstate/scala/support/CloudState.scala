@@ -6,26 +6,18 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.{Http, HttpConnectionContext}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.typesafe.config.ConfigFactory
-import io.cloudstate.entity.{EntityDiscovery, EntityDiscoveryHandler}
+import io.cloudstate.entity.EntityDiscoveryHandler
 import io.cloudstate.eventsourced.EventSourcedHandler
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object MainServer {
+private final class CloudState(serviceName: String, persistenceId: String, snapshotEvery: Int, entityHandler: EntityHandler) {
 
-  def main(args: Array[String]): Unit = {
-    // Important: enable HTTP/2 in ActorSystem's config
-    // We do it here programmatically, but you can also set it in the application.conf
-    val conf = ConfigFactory
-      .parseString("akka.http.server.preview.enable-http2 = on")
-      .withFallback(ConfigFactory.defaultApplication())
-    val system = ActorSystem("HelloWorld", conf)
-    new MainServer(system).run()
-    // ActorSystem threads will keep the app alive until `system.terminate()` is called
-  }
-}
+  private val conf = ConfigFactory
+    .parseString("akka.http.server.preview.enable-http2 = on")
+    .withFallback(ConfigFactory.defaultApplication())
 
-class MainServer(system: ActorSystem) {
+  private val system = ActorSystem("CloudState", conf)
 
   def run(): Future[Http.ServerBinding] = {
     // Akka boot up code
@@ -35,7 +27,8 @@ class MainServer(system: ActorSystem) {
 
     // Create service handlers
     val service: HttpRequest => Future[HttpResponse] =
-      EntityDiscoveryHandler.partial(new EntityDiscoveryServiceImpl()) orElse EventSourcedHandler.partial(new EventSourcedServiceImpl())
+      EntityDiscoveryHandler.partial(new EntityDiscoveryServiceImpl(serviceName, persistenceId))
+        .orElse(EventSourcedHandler.partial(new EventSourcedServiceImpl(entityHandler)))
 
     // Bind service handler servers to localhost:8080/8081
     val binding = Http().bindAndHandleAsync(
