@@ -70,7 +70,7 @@ class EventSourcedServiceImpl(entityHandler: EntityHandler)(implicit mat: Materi
     }
       .filter(!_.isEmpty)
       .takeWhile(!_.isFailure, inclusive = true)
-      .map(EventSourcedStreamOut.apply _)
+      .map(EventSourcedStreamOut.apply)
   }
 }
 

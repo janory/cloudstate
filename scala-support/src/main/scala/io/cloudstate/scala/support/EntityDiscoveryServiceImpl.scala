@@ -20,8 +20,6 @@ class EntityDiscoveryServiceImpl(serviceName: String, persistenceId: String)(imp
 
     val userFunction = try ByteString.copyFrom(bytes) finally dis.close()
 
-
-    // TODO don't hardcode this
     val entities = Set(Entity(
       entityType = "cloudstate.eventsourced.EventSourced",
       serviceName = serviceName,

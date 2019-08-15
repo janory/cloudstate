@@ -404,16 +404,6 @@ lazy val `scala-shopping-cart` = (project in file("samples/scala-shopping-cart")
     fork in run := true,
 
     libraryDependencies ++= Seq(
-      // Remove these explicit gRPC/netty dependencies once akka-grpc 0.7.1 is released and we've upgraded to using that
-//      "io.grpc"               % "grpc-netty-shaded"    % GrpcJavaVersion,
-//      "io.grpc"               % "grpc-core"            % GrpcJavaVersion,
-//      "com.typesafe.akka"    %% "akka-persistence"     % AkkaVersion,
-//      "com.typesafe.akka"    %% "akka-stream"          % AkkaVersion,
-//      "com.typesafe.akka"    %% "akka-http"            % AkkaHttpVersion,
-//      "com.typesafe.akka"    %% "akka-http-spray-json" % AkkaHttpVersion,
-//      "com.typesafe.akka"    %% "akka-http-core"       % AkkaHttpVersion,
-//      "com.typesafe.akka"    %% "akka-http2-support"   % AkkaHttpVersion,
-//      "com.typesafe.akka"    %% "akka-parsing"         % AkkaVersion,
       "com.google.protobuf"   % "protobuf-java"        % ProtobufVersion % "protobuf",
       "com.thesamet.scalapb" %% "scalapb-runtime"      % scalapb.compiler.Version.scalapbVersion % "protobuf"
     ),
