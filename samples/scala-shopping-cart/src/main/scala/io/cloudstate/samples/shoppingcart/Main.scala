@@ -1,12 +1,19 @@
 package io.cloudstate.samples.shoppingcart
 
+import akka.actor.ActorRef
 import akka.util.ByteString
 import com.example.shoppingcart.persistence.{ItemAdded, ItemRemoved}
 import com.example.shoppingcart.{GetShoppingCart, _}
 import com.google.protobuf.any.{Any => PbAny}
+import com.google.protobuf.empty.Empty
 import com.google.protobuf.{ByteString => PbByteString}
+import io.cloudstate.eventsourced.EventSourcedStreamOut.Message
 import io.cloudstate.scala.support.{Context, EntityHandler}
-import scalapb.GeneratedMessage
+import scalapb.lenses.Updatable
+import scalapb.{GeneratedMessage, Message}
+import akka.util.{ByteString => AkkaBString}
+
+import scala.concurrent.Future
 
 object Main extends App {
  new EntityHandlerImpl()
@@ -77,4 +84,54 @@ class EntityHandlerImpl extends EntityHandler {
       println(s"Got ItemRemoved event with the following parametes $itemRemoved")
   }
 
+}
+
+trait SecondEntityHandler[State, A, B, C] {
+  val ctx: ActorRef = null
+  protected var localState = Option.empty[State]
+
+  type AllCommandTypes = A with B with C
+
+  def deserializePayload(typeUrl: String, payload: AkkaBString): AllCommandTypes
+
+
+  def getCommandHandler(commandName: String): AllCommandTypes => Future[GeneratedMessage]
+
+  def handleCommand() = {
+    val handler = getCommandHandler("")
+    val sg: AllCommandTypes = deserializePayload("", null)
+    handler.apply(sg)
+  }
+}
+
+class SecondEntityHandlerImpl extends SecondEntityHandler[Cart, GetShoppingCart, AddLineItem, RemoveLineItem] with ShoppingCart {
+
+   def getCommandHandler(commandName: String): GetShoppingCart with AddLineItem with RemoveLineItem => Future[GeneratedMessage] = {
+    commandName match {
+      case "GetCart" => getCart
+      case "AddItem" => addItem
+      case "RemoveItem" => removeItem
+    }
+  }
+
+  override def addItem(in: AddLineItem): Future[Empty] = {
+    ctx ! "ItemAdded"
+    Future.successful(Empty())
+  }
+
+  override def removeItem(in: RemoveLineItem): Future[Empty] = {
+    ctx ! "ItemRemoved"
+    Future.successful(Empty())
+  }
+
+
+  override def getCart(in: GetShoppingCart): Future[Cart] = {
+    Future.successful(localState.get)
+  }
+
+   def dsadsa(typeUrl: String, payload: AkkaBString): GetShoppingCart with AddLineItem with RemoveLineItem  = typeUrl match {
+    case "type.googleapis.com/com.example.shoppingcart.GetShoppingCart" => GetShoppingCart()
+    case "type.googleapis.com/com.example.shoppingcart.AddLineItem" => AddLineItem()
+    case "type.googleapis.com/com.example.shoppingcart.RemoveLineItem" => RemoveLineItem()
+   }
 }
